@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Chess Turns</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@100&family=Neucha&family=Open+Sans:wght@300&display=swap" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body >
+
+	<clicker onclick="toggleTurn()"> </clicker>
+
+	<pause style='z-index: 2;' onclick='togglePause()'> <i style="font-size:32px; cursor: pointer;" id="pauseBtn" class="material-icons"> pause </i> </pause>
+
+	<totalTimes id='totalTimesArea' style='display: none;'>
+		<timeArea>
+			<img loading="lazy" src="https://i.ibb.co/8nwypN1/
+			white-icon.png">
+			<p id="whiteTotalTime"> 00:00 </p>
+		</timeArea>
+		<timeArea>
+			<img loading="lazy" src="https://i.ibb.co/4gHPt9v/black-icon.png">
+			<p id="blackTotalTime"> 00:00 </p>
+		</timeArea>
+		<timeArea>
+			<img loading="lazy" src="https://i.ibb.co/L96yGfP/hourglass.jpg">
+			<p id="gameTotalTime"> 00:00 </p>
+		</timeArea>
+		<timeArea>
+			<img loading="lazy" src="https://i.ibb.co/p1RJx0L/sum.png">
+			<p id="turnCount"> 0 </p>
+		</timeArea>
+		
+	</totalTimes>
+	<timer id='turnTimer' style='display: none;'> 00:00 </timer>
+	<startTip id='startTip'> Click to Begin </startTip>
+	<quote> </quote>
+</body>
+</html>
+<style type="text/css">
+	* {
+		margin: 0;
+		padding: 0;
+		box-sizing: border-box;
+		font-family: 'Montserrat', sans-serif;
+		font-family: 'Neucha', cursive;
+		font-family: 'Open Sans', sans-serif;
+	}
+	body{
+		width:100vw;
+		height: 100vh;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		flex-direction: column;
+		color: black;
+		background-color: white;
+	}
+
+	.white {
+		background-color: white;
+		color: black;
+	}
+
+	.black {
+		background-color: black;
+		color: white;
+	}
+
+	timer{
+		font-size: 6em;
+	}
+	totalTimes {
+		position: fixed;
+		top: 2vh;
+		left: 2vh;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		flex-direction: column;
+		border: 2px solid black;
+		border-radius: 15px;
+		background-color: white;
+		padding: 2vh;
+		color: black;
+	}
+	timeArea {
+		display: flex;
+		justify-content: space-between;
+		align-items: flex-start;
+		font-size: 1.5em;
+		width: 100%;
+	}
+	timeArea img {
+		width: 4vh;
+		height: 4vh;
+		margin-right: 1.5vw;
+	}
+	pause {
+		position: fixed;
+		top: 2vh;
+		left: 90vw;
+	}
+	clicker {
+		position: fixed;
+		top: 4vh;
+		left: 0;
+		width: 100vw;
+		height: 96vh;
+		z-index: 0;
+	}
+</style>
+<script type="text/javascript">
+	let turn = 'white'
+	let turnCount = 0
+
+	let gameOn = false
+	let gameStartTime
+	let gameTimeMS = 0
+	let pauseTimeMS = 0
+	let whitePauseTimeMS = 0 
+	let blackPauseTimeMS = 0 
+
+	let gameTimeInterval
+	let pauseTimeInterval
+	let whiteTimerInterval
+	let blackTimerInterval
+
+	let whiteTurnStart
+	let blackTurnStart
+
+	let whiteTotalTimeMS = 0
+	let blackTotalTimeMS = 0
+
+	let fireRate = 50
+
+	let paused = false
+	const togglePause = () => {
+		if(paused){
+			paused = false
+			clearInterval(pauseTimeInterval)
+			document.getElementById('pauseBtn').innerHTML = 'pause'
+			whitePauseTimeMS = 0
+			blackPauseTimeMS = 0
+		}
+		else{
+			paused = true
+			let pauseStartTime = new Date().getTime()
+			whitePauseTimeMS = 0
+			blackPauseTimeMS = 0
+			pauseTimeInterval = setInterval(()=>{
+				pauseTimeMS = new Date().getTime() - pauseStartTime
+			
+				if(turn == 'black'){
+					whitePauseTimeMS = new Date().getTime() - pauseStartTime
+				}
+				else if(turn == 'white'){
+					blackPauseTimeMS = new Date().getTime() - pauseStartTime
+				}
+
+			}, fireRate)
+			document.getElementById('pauseBtn').innerHTML = 'play_arrow'
+		}
+	}
+
+
+	const toggleTurn = () => {
+
+		if(paused)
+			return
+
+		if(!gameOn){
+			gameOn = true
+			document.getElementById('totalTimesArea').style.display = 'flex'
+			document.getElementById('turnTimer').style.display = 'flex'
+			document.getElementById('startTip').style.display = 'none'
+			gameStartTime = new Date()
+			startWhiteTimer()
+			startGameTimer()
+			turn = 'black'
+		}
+		else if(turn == 'white') {
+			startWhiteTimer()
+			addTurn()
+			turn = 'black' 
+			document.getElementsByTagName('body')[0].classList.remove('black')
+			document.getElementsByTagName('body')[0].classList.add('white')
+			
+		}
+		else if(turn == 'black'){
+			startBlackTimer()
+			addTurn() 
+			turn = 'white'
+			document.getElementsByTagName('body')[0].classList.remove('white')
+			document.getElementsByTagName('body')[0].classList.add('black')
+		}
+	}
+
+	const startGameTimer = () => {
+		gameTimeInterval = setInterval(()=>{
+			addToTotalTime('game')
+		},fireRate)
+	}
+
+	const addTurn = () => {
+		turnCount++
+		document.getElementById('turnCount').innerHTML = turnCount
+	}
+
+	const startWhiteTimer = () => {
+		clearInterval(blackTimerInterval)
+		whiteTurnStart = new Date()
+		whiteTimerInterval = setInterval(()=>{
+			if(paused)
+				return
+			setTurnTimer(new Date().getTime() - whiteTurnStart.getTime() - whitePauseTimeMS)
+			addToTotalTime('white')
+		},fireRate)
+	}
+	const startBlackTimer = () => {
+		clearInterval(whiteTimerInterval)
+		blackTurnStart = new Date()
+		blackTimerInterval = setInterval(()=>{
+			if(paused)
+				return
+			setTurnTimer(new Date().getTime() - blackTurnStart.getTime() - blackPauseTimeMS)
+			addToTotalTime('black')
+		},fireRate)
+	}
+
+	const setTurnTimer = (date) => {
+		document.getElementById('turnTimer').innerHTML = getFormattedTimeElapsed(date)
+	}
+
+	const addToTotalTime = (side) => {
+		if(side == 'white') {
+			whiteTotalTimeMS = getTotalGameTimeMS() - blackTotalTimeMS
+			document.getElementById('whiteTotalTime').innerHTML =getFormattedTimeElapsed(whiteTotalTimeMS)
+
+		}else if(side == 'black'){
+			blackTotalTimeMS = getTotalGameTimeMS() - whiteTotalTimeMS
+			document.getElementById('blackTotalTime').innerHTML =getFormattedTimeElapsed(blackTotalTimeMS)
+		}
+		else if (side == 'game') {
+			gameTimeMS = getTotalGameTimeMS()
+			document.getElementById('gameTotalTime').innerHTML = getFormattedTimeElapsed(gameTimeMS)
+		}
+	}
+
+	const getTotalGameTimeMS = () => {
+		return (new Date().getTime() - gameStartTime.getTime()) - pauseTimeMS
+	}
+
+	const getFormattedTimeElapsed = (ms) => {
+		let secondsElapsed = ms/1000
+		let minuntesElapsed = secondsElapsed/60
+		let hoursElapsed = minuntesElapsed/60
+
+		let secondsDisplay = parseInt(secondsElapsed)%60
+		let minutesDisplay = parseInt(minuntesElapsed)%60
+		let hoursDisplay = parseInt(hoursElapsed)
+
+		if(secondsDisplay < 10) {
+			secondsDisplay = '0' + secondsDisplay
+		}
+
+		if(minutesDisplay < 10) {
+			minutesDisplay = '0' + minutesDisplay + ':'
+		}else{
+			minutesDisplay += ':'
+		}
+
+		if(hoursDisplay == 0){
+			hoursDisplay = ''
+		}else if(hoursDisplay < 10){
+			hoursDisplay = '0' + hoursDisplay + ':'
+		}else{
+			hoursDisplay += ':'
+		}
+
+		secondsDisplay = '' + secondsDisplay
+		minutesDisplay = '' + minutesDisplay
+		hoursDisplay = '' + hoursDisplay
+
+		return hoursDisplay + minutesDisplay + secondsDisplay
+	}
+</script>
